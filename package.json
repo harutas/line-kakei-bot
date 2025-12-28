@@ -1,0 +1,28 @@
+{
+  "name": "line-kakei-bot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "dotenvx run -f .env.development -- nodemon src/index.ts",
+    "build": "tsc -p .",
+    "start": "dotenvx run -f .env.development -- node dist/index.js",
+    "start:production": "dotenvx run -f .env.production -- node dist/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@dotenvx/dotenvx": "^1.51.2",
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "@tsconfig/node22": "^22.0.5",
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.0.3",
+    "nodemon": "^3.1.11",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}
