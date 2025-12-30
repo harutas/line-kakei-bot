@@ -19,6 +19,7 @@
   "dependencies": {
     "@dotenvx/dotenvx": "^1.51.2",
     "@line/bot-sdk": "^10.5.0",
+    "dayjs": "^1.11.19",
     "express": "^5.2.1",
     "googleapis": "^169.0.0",
     "pino": "^10.1.0",
