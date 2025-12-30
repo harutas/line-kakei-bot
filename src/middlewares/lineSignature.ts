@@ -1,7 +1,7 @@
-import { middleware, MiddlewareConfig } from "@line/bot-sdk";
+import { type MiddlewareConfig, middleware } from '@line/bot-sdk';
 
 const middlewareConfig: MiddlewareConfig = {
-  channelSecret: process.env.LINE_CHANNEL_SECRET || "",
+	channelSecret: process.env.LINE_CHANNEL_SECRET || '',
 };
 
 /**

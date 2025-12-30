@@ -5,21 +5,21 @@
  * @returns 整形された数値、または null
  */
 export const cleanAmount = (text: string): number | null => {
-  // カンマと「円」を除去
-  const cleaned = text.replace(/,/g, "").replace(/円/g, "").trim();
+	// カンマと「円」を除去
+	const cleaned = text.replace(/,/g, '').replace(/円/g, '').trim();
 
-  // 数字のみチェック
-  if (!/^\d+$/.test(cleaned)) {
-    return null;
-  }
+	// 数字のみチェック
+	if (!/^\d+$/.test(cleaned)) {
+		return null;
+	}
 
-  const amount = parseInt(cleaned, 10);
+	const amount = parseInt(cleaned, 10);
 
-  if (isNaN(amount)) {
-    return null;
-  }
+	if (Number.isNaN(amount)) {
+		return null;
+	}
 
-  return amount;
+	return amount;
 };
 
 /**
@@ -27,38 +27,36 @@ export const cleanAmount = (text: string): number | null => {
  * @param text - 入力テキスト
  * @returns {item, amount} または null
  */
-export const parseExpenseInput = (
-  text: string
-): { item: string; amount: number } | null => {
-  const trimmedText = text.trim();
+export const parseExpenseInput = (text: string): { item: string; amount: number } | null => {
+	const trimmedText = text.trim();
 
-  // 形式1: 改行区切り（1行目: 支払い内容、2行目: 金額）
-  if (trimmedText.includes("\n")) {
-    const lines = trimmedText.split("\n");
-    if (lines.length >= 2) {
-      const item = lines[0].trim();
-      const amountText = lines[1].trim();
-      const amount = cleanAmount(amountText);
+	// 形式1: 改行区切り（1行目: 支払い内容、2行目: 金額）
+	if (trimmedText.includes('\n')) {
+		const lines = trimmedText.split('\n');
+		if (lines.length >= 2) {
+			const item = lines[0].trim();
+			const amountText = lines[1].trim();
+			const amount = cleanAmount(amountText);
 
-      if (item && amount !== null) {
-        return { item, amount };
-      }
-    }
-  }
+			if (item && amount !== null) {
+				return { item, amount };
+			}
+		}
+	}
 
-  // 形式2: スペース区切り（最後の要素を金額として扱う）
-  const parts = trimmedText.split(/\s+/);
-  if (parts.length >= 2) {
-    const amountText = parts[parts.length - 1];
-    const amount = cleanAmount(amountText);
+	// 形式2: スペース区切り（最後の要素を金額として扱う）
+	const parts = trimmedText.split(/\s+/);
+	if (parts.length >= 2) {
+		const amountText = parts[parts.length - 1];
+		const amount = cleanAmount(amountText);
 
-    if (amount !== null) {
-      const item = parts.slice(0, -1).join(" ").trim();
-      if (item) {
-        return { item, amount };
-      }
-    }
-  }
+		if (amount !== null) {
+			const item = parts.slice(0, -1).join(' ').trim();
+			if (item) {
+				return { item, amount };
+			}
+		}
+	}
 
-  return null;
+	return null;
 };
