@@ -1,6 +1,5 @@
 import pino from 'pino';
-
-const isDevelopment = process.env.ENV !== 'production';
+import { isDevelopment } from './isDevelopment';
 
 const developmentConfig = {
 	level: 'debug',
