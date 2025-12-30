@@ -8,6 +8,9 @@
     "build": "tsc -p .",
     "start": "dotenvx run -f .env.development -- node dist/index.js",
     "start:production": "dotenvx run -f .env.production -- node dist/index.js",
+    "lint": "biome lint ./src",
+    "format": "biome format --write ./src",
+    "check": "biome check ./src",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -19,6 +22,7 @@
     "express": "^5.2.1"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.3.10",
     "@tsconfig/node22": "^22.0.5",
     "@types/express": "^5.0.6",
     "@types/node": "^25.0.3",
