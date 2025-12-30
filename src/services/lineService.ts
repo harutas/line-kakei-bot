@@ -7,6 +7,9 @@ import {
 } from '@line/bot-sdk';
 import { ExpenseCategory, toExpenseCategoryLabel } from '../types/expense';
 import { ACTION_SELECT_CATEGORY, type PostbackData } from '../types/postback';
+import logger from '../utils/logger';
+
+const log = logger.child({ service: 'LineService' });
 
 const clientConfig: ClientConfig = {
 	channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN || '',
@@ -36,7 +39,7 @@ class LineService {
 				messages: [message],
 			});
 		} catch (error) {
-			console.error({ error, replyToken }, 'Failed to send text message');
+			log.error({ err: error, replyToken }, 'Failed to send text message');
 			throw error;
 		}
 	}
@@ -85,7 +88,7 @@ class LineService {
 				messages: [message],
 			});
 		} catch (error) {
-			console.error({ error, replyToken }, 'Failed to send category selection');
+			log.error({ err: error, replyToken }, 'Failed to send category selection');
 			throw error;
 		}
 	}
@@ -116,7 +119,7 @@ class LineService {
 				messages: [message],
 			});
 		} catch (error) {
-			console.error({ error, replyToken }, 'Failed to send completion message');
+			log.error({ err: error, replyToken }, 'Failed to send completion message');
 			throw error;
 		}
 	}

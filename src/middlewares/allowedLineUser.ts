@@ -1,5 +1,8 @@
 import type { webhook } from '@line/bot-sdk';
 import type { NextFunction, Request, Response } from 'express';
+import logger from '../utils/logger';
+
+const log = logger.child({ middleware: 'allowedLineUser' });
 
 /**
  * 許可されたユーザーIDのリスト
@@ -36,14 +39,14 @@ export const allowedLineUser = (req: Request, res: Response, next: NextFunction)
 
 			if (!userId) {
 				// ユーザーIDが取得できない場合は拒否
-				console.warn('User ID not found in event', { event });
+				log.warn({ event }, 'User ID not found in event');
 				res.status(403).json({ message: 'Forbidden: User ID not found' });
 				return;
 			}
 
 			if (!allowedUserIds.includes(userId)) {
 				// 許可されていないユーザー
-				console.warn('Unauthorized user', { userId });
+				log.warn({ userId }, 'Unauthorized user');
 				res.status(403).json({ message: 'Forbidden: Unauthorized user' });
 				return;
 			}
@@ -52,7 +55,7 @@ export const allowedLineUser = (req: Request, res: Response, next: NextFunction)
 		// 全てのユーザーが許可されている
 		next();
 	} catch (error) {
-		console.error('Error in authMiddleware', error);
+		log.error({ err: error }, 'Error in auth middleware');
 		res.status(500).json({ message: 'Internal server error' });
 	}
 };

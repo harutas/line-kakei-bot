@@ -3,6 +3,9 @@ import type { Request, Response } from 'express';
 import lineService from '../services/lineService';
 import { ACTION_SELECT_CATEGORY, type PostbackData } from '../types/postback';
 import { parseExpenseInput } from '../utils/expenseParser';
+import logger from '../utils/logger';
+
+const log = logger.child({ handler: 'webhook' });
 
 /**
  * テキストメッセージハンドラー
@@ -66,19 +69,19 @@ const postbackEventHandler = async (
 		if (data.action === ACTION_SELECT_CATEGORY) {
 			// カテゴリ、支払い内容、金額を取得
 			if (!data.category || !data.item || !data.amount) {
-				console.error('Missing data in postback', { data });
+				log.warn({ data }, 'Missing data in postback');
 				await lineService.replyText(event.replyToken, 'エラーが発生しました');
 				return;
 			}
 
-			// コンソールログ出力
+			// 支払い記録ログ出力
 			const record = {
 				date: new Date(),
 				item: data.item,
 				category: data.category,
 				amount: data.amount,
 			};
-			console.log('支払い記録:', record);
+			log.info({ record }, 'Expense recorded');
 
 			// 完了メッセージ送信
 			await lineService.replyWithCompletion(
@@ -88,11 +91,11 @@ const postbackEventHandler = async (
 				data.amount,
 			);
 		} else {
-			console.error('Unknown postback action:', data.action);
+			log.error({ action: data.action }, 'Unknown postback action');
 			await lineService.replyText(event.replyToken, 'エラーが発生しました');
 		}
 	} catch (error) {
-		console.error('Error parsing postback data', { error, event });
+		log.error({ err: error, event }, 'Failed to parse postback data');
 		await lineService.replyText(event.replyToken, 'エラーが発生しました');
 	}
 };
@@ -101,29 +104,36 @@ export const handleWebhook = async (req: Request, res: Response): Promise<void> 
 	const callbackRequest: webhook.CallbackRequest = req.body;
 	const events: webhook.Event[] = callbackRequest.events ?? [];
 
-	await Promise.all(
-		events.map(async (event: webhook.Event) => {
-			try {
+	try {
+		await Promise.all(
+			events.map(async (event: webhook.Event) => {
 				// イベントタイプに応じて処理を振り分け
 				if (event.type === 'message') {
 					await textEventHandler(event);
 				} else if (event.type === 'postback') {
 					await postbackEventHandler(event);
 				}
-			} catch (err: unknown) {
-				if (err instanceof HTTPFetchError) {
-					console.error(err.status);
-					console.error(err.headers.get('x-line-request-id'));
-					console.error(err.body);
-				} else if (err instanceof Error) {
-					console.error(err);
-				}
+			}),
+		);
 
-				return res.status(500).json({
-					status: 'error',
-				});
-			}
-		}),
-	);
-	res.status(200).json({ message: 'ok' });
+		res.status(200).json({ message: 'ok' });
+	} catch (err: unknown) {
+		if (err instanceof HTTPFetchError) {
+			log.error(
+				{
+					err: err,
+					status: err.status,
+					requestId: err.headers.get('x-line-request-id'),
+					body: err.body,
+				},
+				'LINE API error',
+			);
+		} else if (err instanceof Error) {
+			log.error({ err }, 'Error handling webhook event');
+		}
+
+		res.status(500).json({
+			status: 'error',
+		});
+	}
 };

@@ -1,10 +1,14 @@
 import express, { type Application, type NextFunction, type Request, type Response } from 'express';
 import { handleWebhook } from './handlers/webhook';
 import { allowedLineUser } from './middlewares/allowedLineUser';
+import { httpLogger } from './middlewares/httpLogger';
 import { lineSignature } from './middlewares/lineSignature';
+import logger from './utils/logger';
 
 const app: Application = express();
 const port = process.env.PORT || 8080;
+
+app.use(httpLogger);
 
 // ヘルスチェック
 app.get('/', (_req: Request, res: Response) => {
@@ -23,8 +27,8 @@ app.use((_req: Request, res: Response) => {
 
 // 500
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-	console.error(err);
+	logger.error({ err }, 'Unhandled error');
 	res.status(500).json({ message: 'Internal server error' });
 });
 
-app.listen(port, () => console.log(`Listening on port ${port}!`));
+app.listen(port, () => logger.info({ port }, 'Server started'));
