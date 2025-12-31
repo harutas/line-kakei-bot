@@ -1,13 +1,3 @@
-/**
- * 支払い記録
- */
-export interface ExpenseRecord {
-	date: Date; // 支払い日時
-	item: string; // 支払い内容 (例: "ランチ")
-	category: string; // カテゴリ (食費、日用品など)
-	amount: number; // 金額
-}
-
 export const ExpenseCategory = {
 	FOOD: 'FOOD',
 	DAILY_GOODS: 'DAILY_GOODS',

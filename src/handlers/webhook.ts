@@ -1,7 +1,10 @@
 import { HTTPFetchError, type MessageAPIResponseBase, type webhook } from '@line/bot-sdk';
 import type { Request, Response } from 'express';
+import googleSheetsService from '../services/googleSheetsService';
 import lineService from '../services/lineService';
+import { toExpenseCategoryLabel } from '../types/expense';
 import { ACTION_SELECT_CATEGORY, type PostbackData } from '../types/postback';
+import type { ExpenseRecordWithUser } from '../types/sheets';
 import { parseExpenseInput } from '../utils/expenseParser';
 import logger from '../utils/logger';
 
@@ -74,22 +77,43 @@ const postbackEventHandler = async (
 				return;
 			}
 
-			// 支払い記録ログ出力
-			const record = {
+			// ユーザーIDの取得と検証
+			const userId = event.source?.userId;
+			if (!userId) {
+				log.warn({ event }, 'User ID not found');
+				await lineService.replyText(event.replyToken, 'エラーが発生しました');
+				return;
+			}
+
+			// 支払い記録の構築（ユーザーID追加）
+			const record: ExpenseRecordWithUser = {
 				date: new Date(),
 				item: data.item,
-				category: data.category,
+				category: toExpenseCategoryLabel(data.category),
 				amount: data.amount,
+				userId: userId.substring(0, 5),
 			};
-			log.info({ record }, 'Expense recorded');
 
-			// 完了メッセージ送信
-			await lineService.replyWithCompletion(
-				event.replyToken,
-				data.item,
-				data.category,
-				data.amount,
-			);
+			// Google Sheetsへの書き込み
+			try {
+				await googleSheetsService.appendExpenseRecord(record);
+				log.info({ record }, 'Expense recorded to Google Sheets');
+
+				// 成功時のみ完了メッセージ送信
+				await lineService.replyWithCompletion(
+					event.replyToken,
+					data.item,
+					data.category,
+					data.amount,
+				);
+			} catch (error) {
+				// エラー時はユーザーに通知
+				log.error({ err: error, record }, 'Failed to record expense');
+				await lineService.replyText(
+					event.replyToken,
+					'記録に失敗しました。もう一度試してください。',
+				);
+			}
 		} else {
 			log.error({ action: data.action }, 'Unknown postback action');
 			await lineService.replyText(event.replyToken, 'エラーが発生しました');
