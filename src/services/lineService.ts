@@ -22,6 +22,10 @@ class LineService {
 		this.client = new messagingApi.MessagingApiClient(clientConfig);
 	}
 
+	async showLoading(userId: string) {
+		await this.client.showLoadingAnimation({ chatId: userId, loadingSeconds: 10 });
+	}
+
 	/**
 	 * テキストメッセージを返信
 	 * @param replyToken - 返信トークン
@@ -47,19 +51,19 @@ class LineService {
 	/**
 	 * カテゴリ選択のQuick Replyを送信
 	 * @param replyToken - 返信トークン
-	 * @param item - 支払い内容
+	 * @param content - 支払い内容
 	 * @param amount - 金額
 	 */
 	async replyWithCategorySelection(
 		replyToken: string,
-		item: string,
+		content: string,
 		amount: number,
 	): Promise<void> {
 		try {
 			const quickReplyItems: QuickReplyItem[] = Object.values(ExpenseCategory).map((category) => {
 				const data: PostbackData = {
 					action: ACTION_SELECT_CATEGORY,
-					item,
+					content,
 					amount,
 					category,
 				};
@@ -69,6 +73,7 @@ class LineService {
 						type: 'postback',
 						label: toExpenseCategoryLabel(category),
 						data: JSON.stringify(data),
+						displayText: toExpenseCategoryLabel(category),
 					},
 				};
 			});
@@ -79,7 +84,7 @@ class LineService {
 
 			const message: TextMessage = {
 				type: 'text',
-				text: `「${item}」で${amount.toLocaleString()}円だね。\nカテゴリを選んでね！`,
+				text: `「${content}」で${amount.toLocaleString()}円だね。\nカテゴリを選んでね！`,
 				quickReply,
 			};
 
@@ -96,22 +101,29 @@ class LineService {
 	/**
 	 * 記録完了メッセージを送信
 	 * @param replyToken - 返信トークン
-	 * @param item - 支払い内容
+	 * @param content - 支払い内容
 	 * @param category - カテゴリ
 	 * @param amount - 金額
 	 */
-	async replyWithCompletion(
+	async replyWithCompletionAndSummary(
 		replyToken: string,
-		item: string,
-		category: ExpenseCategory,
-		amount: number,
+		data: {
+			category: ExpenseCategory;
+			content: string;
+			amount: number;
+			monthlyTotal: number;
+		},
 	): Promise<void> {
 		try {
 			const message: TextMessage = {
 				type: 'text',
-				text: `記録したよ！\n${toExpenseCategoryLabel(
-					category,
-				)}： ${item} ${amount.toLocaleString()}円`,
+				text: [
+					`記録したよ！`,
+					`${toExpenseCategoryLabel(
+						data.category,
+					)}： ${data.content} ${data.amount.toLocaleString()}円`,
+					`今月は${data.monthlyTotal.toLocaleString()}円支払ったよ`,
+				].join('\n'),
 			};
 
 			await this.client.replyMessage({

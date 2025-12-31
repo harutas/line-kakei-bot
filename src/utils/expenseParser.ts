@@ -25,21 +25,21 @@ export const cleanAmount = (text: string): number | null => {
 /**
  * テキストから支払い内容と金額をパース
  * @param text - 入力テキスト
- * @returns {item, amount} または null
+ * @returns {content, amount} または null
  */
-export const parseExpenseInput = (text: string): { item: string; amount: number } | null => {
+export const parseExpenseInput = (text: string): { content: string; amount: number } | null => {
 	const trimmedText = text.trim();
 
 	// 形式1: 改行区切り（1行目: 支払い内容、2行目: 金額）
 	if (trimmedText.includes('\n')) {
 		const lines = trimmedText.split('\n');
 		if (lines.length >= 2) {
-			const item = lines[0].trim();
+			const content = lines[0].trim();
 			const amountText = lines[1].trim();
 			const amount = cleanAmount(amountText);
 
-			if (item && amount !== null) {
-				return { item, amount };
+			if (content && amount !== null) {
+				return { content, amount };
 			}
 		}
 	}
@@ -51,9 +51,9 @@ export const parseExpenseInput = (text: string): { item: string; amount: number 
 		const amount = cleanAmount(amountText);
 
 		if (amount !== null) {
-			const item = parts.slice(0, -1).join(' ').trim();
-			if (item) {
-				return { item, amount };
+			const content = parts.slice(0, -1).join(' ').trim();
+			if (content) {
+				return { content, amount };
 			}
 		}
 	}

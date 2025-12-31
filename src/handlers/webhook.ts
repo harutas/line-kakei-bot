@@ -1,10 +1,8 @@
 import { HTTPFetchError, type MessageAPIResponseBase, type webhook } from '@line/bot-sdk';
 import type { Request, Response } from 'express';
-import googleSheetsService from '../services/googleSheetsService';
+import expenseService from '../services/expenseService';
 import lineService from '../services/lineService';
-import { toExpenseCategoryLabel } from '../types/expense';
 import { ACTION_SELECT_CATEGORY, type PostbackData } from '../types/postback';
-import type { ExpenseRecordWithUser } from '../types/sheets';
 import { parseExpenseInput } from '../utils/expenseParser';
 import logger from '../utils/logger';
 
@@ -39,7 +37,7 @@ const textEventHandler = async (
 		return;
 	}
 
-	const { item, amount } = parsed;
+	const { content, amount } = parsed;
 
 	// 金額のバリデーション
 	if (amount <= 0 || amount > 1000000) {
@@ -48,7 +46,7 @@ const textEventHandler = async (
 	}
 
 	// カテゴリ選択表示（item, amountをpostbackに埋め込む）
-	await lineService.replyWithCategorySelection(event.replyToken, item, amount);
+	await lineService.replyWithCategorySelection(event.replyToken, content, amount);
 };
 
 /**
@@ -67,60 +65,58 @@ const postbackEventHandler = async (
 	}
 
 	try {
+		const now = new Date();
+
 		const data: PostbackData = JSON.parse(event.postback.data);
 
-		if (data.action === ACTION_SELECT_CATEGORY) {
-			// カテゴリ、支払い内容、金額を取得
-			if (!data.category || !data.item || !data.amount) {
-				log.warn({ data }, 'Missing data in postback');
-				await lineService.replyText(event.replyToken, 'エラーが発生しました');
-				return;
-			}
-
-			// ユーザーIDの取得と検証
-			const userId = event.source?.userId;
-			if (!userId) {
-				log.warn({ event }, 'User ID not found');
-				await lineService.replyText(event.replyToken, 'エラーが発生しました');
-				return;
-			}
-
-			// 支払い記録の構築（ユーザーID追加）
-			const record: ExpenseRecordWithUser = {
-				date: new Date(),
-				item: data.item,
-				category: toExpenseCategoryLabel(data.category),
-				amount: data.amount,
-				userId: userId.substring(0, 5),
-			};
-
-			// Google Sheetsへの書き込み
-			try {
-				await googleSheetsService.appendExpenseRecord(record);
-				log.info({ record }, 'Expense recorded to Google Sheets');
-
-				// 成功時のみ完了メッセージ送信
-				await lineService.replyWithCompletion(
-					event.replyToken,
-					data.item,
-					data.category,
-					data.amount,
-				);
-			} catch (error) {
-				// エラー時はユーザーに通知
-				log.error({ err: error, record }, 'Failed to record expense');
-				await lineService.replyText(
-					event.replyToken,
-					'記録に失敗しました。もう一度試してください。',
-				);
-			}
-		} else {
+		// カテゴリの選択じゃない
+		if (data.action !== ACTION_SELECT_CATEGORY) {
 			log.error({ action: data.action }, 'Unknown postback action');
 			await lineService.replyText(event.replyToken, 'エラーが発生しました');
+			return;
 		}
+
+		// カテゴリ、支払い内容、金額がない
+		if (!data.category || !data.content || !data.amount) {
+			log.warn({ data }, 'Missing data in postback');
+			await lineService.replyText(event.replyToken, 'エラーが発生しました');
+			return;
+		}
+
+		// ユーザーIDがない
+		const userId = event.source?.userId;
+		if (!userId) {
+			log.warn({ event }, 'User ID not found');
+			await lineService.replyText(event.replyToken, 'エラーが発生しました');
+			return;
+		}
+
+		// ローディング表示
+		await lineService.showLoading(userId);
+
+		// 支払い記録の保存
+		const record = await expenseService.record({
+			userId,
+			date: now,
+			category: data.category,
+			content: data.content,
+			amount: data.amount,
+		});
+
+		log.info({ record }, 'Expense recorded to Firestore');
+
+		// 今月の集計取得
+		const monthlySummary = await expenseService.getMonthlySummary(userId, now);
+
+		await lineService.replyWithCompletionAndSummary(event.replyToken, {
+			content: data.content,
+			category: data.category,
+			amount: data.amount,
+			monthlyTotal: monthlySummary.totalAmount,
+		});
 	} catch (error) {
-		log.error({ err: error, event }, 'Failed to parse postback data');
-		await lineService.replyText(event.replyToken, 'エラーが発生しました');
+		log.error({ err: error, event }, 'Failed to handle postback');
+		await lineService.replyText(event.replyToken, '記録に失敗しました。もう一度試してください。');
 	}
 };
 

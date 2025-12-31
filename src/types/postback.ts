@@ -12,7 +12,7 @@ export type PostbackAction = typeof ACTION_SELECT_CATEGORY;
  */
 export interface PostbackData {
 	action: PostbackAction;
-	item: string; // 支払い内容
+	content: string; // 支払い内容
 	amount: number; // 金額
 	category?: ExpenseCategory; // 選択されたカテゴリ（postback時にセット）
 }
