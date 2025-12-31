@@ -25,34 +25,35 @@ export const allowedLineUser = (req: Request, res: Response, next: NextFunction)
 		const callbackRequest: webhook.CallbackRequest = req.body;
 		const events: webhook.Event[] = callbackRequest.events || [];
 
+		// イベントがない場合はスキップ
 		if (events.length === 0) {
-			// イベントがない場合はスキップ
 			next();
 			return;
 		}
 
 		const allowedUserIds = getAllowedUserIds();
 
-		// 全イベントのユーザーIDをチェック
-		for (const event of events) {
+		// 許可されたイベントのみをフィルタリング
+		const validEvents = events.filter((event) => {
 			const userId = event.source?.userId;
 
+			// ユーザーIDが取得できない場合は除外
 			if (!userId) {
-				// ユーザーIDが取得できない場合は拒否
 				log.warn({ event }, 'User ID not found in event');
-				res.status(403).json({ message: 'Forbidden: User ID not found' });
-				return;
+				return false;
 			}
 
+			// 許可されていないユーザーは除外
 			if (!allowedUserIds.includes(userId)) {
-				// 許可されていないユーザー
 				log.warn({ userId }, 'Unauthorized user');
-				res.status(403).json({ message: 'Forbidden: Unauthorized user' });
-				return;
+				return false;
 			}
-		}
 
-		// 全てのユーザーが許可されている
+			return true;
+		});
+
+		req.body.events = validEvents;
+
 		next();
 	} catch (error) {
 		log.error({ err: error }, 'Error in auth middleware');
