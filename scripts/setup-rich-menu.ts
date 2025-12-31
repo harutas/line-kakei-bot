@@ -41,7 +41,7 @@ async function setupRichMenu() {
 			width: 2500,
 			height: 843,
 		},
-		selected: true,
+		selected: false,
 		name: 'Kakei Bot Menu',
 		chatBarText: 'メニュー',
 		areas: [
