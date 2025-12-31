@@ -10,7 +10,8 @@
     "lint": "biome lint ./src",
     "format": "biome format --write ./src",
     "check": "biome check ./src",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "setup:richmenu": "dotenvx run -f .env.development -- ts-node scripts/setup-rich-menu.ts",
+    "delete:richmenu": "dotenvx run -f .env.development -- ts-node scripts/delete-rich-menu.ts"
   },
   "keywords": [],
   "author": "",
