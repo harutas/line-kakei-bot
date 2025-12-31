@@ -2,7 +2,15 @@ import { HTTPFetchError, type MessageAPIResponseBase, type webhook } from '@line
 import type { Request, Response } from 'express';
 import expenseService from '../services/expenseService';
 import lineService from '../services/lineService';
-import { ACTION_SELECT_CATEGORY, type PostbackData } from '../types/postback';
+import { formatSummaryMessage, HOW_TO_USE_MESSAGE } from '../templates/messages';
+import {
+	ACTION_CURRENT_MONTH_SUMMARY,
+	ACTION_HOW_TO_USE,
+	ACTION_LAST_MONTH_SUMMARY,
+	ACTION_SELECT_CATEGORY,
+	type PostbackData,
+} from '../types/postback';
+import { dayjs } from '../utils/datetime';
 import { parseExpenseInput } from '../utils/expenseParser';
 import logger from '../utils/logger';
 
@@ -51,7 +59,7 @@ const textEventHandler = async (
 
 /**
  * Postbackイベントハンドラー
- * カテゴリ選択を処理
+ * カテゴリ選択、集計表示、使い方表示を処理
  */
 const postbackEventHandler = async (
 	event: webhook.Event,
@@ -66,24 +74,9 @@ const postbackEventHandler = async (
 
 	try {
 		const now = new Date();
-
 		const data: PostbackData = JSON.parse(event.postback.data);
 
-		// カテゴリの選択じゃない
-		if (data.action !== ACTION_SELECT_CATEGORY) {
-			log.error({ action: data.action }, 'Unknown postback action');
-			await lineService.replyText(event.replyToken, 'エラーが発生しました');
-			return;
-		}
-
-		// カテゴリ、支払い内容、金額がない
-		if (!data.category || !data.content || !data.amount) {
-			log.warn({ data }, 'Missing data in postback');
-			await lineService.replyText(event.replyToken, 'エラーが発生しました');
-			return;
-		}
-
-		// ユーザーIDがない
+		// ユーザーIDを取得
 		const userId = event.source?.userId;
 		if (!userId) {
 			log.warn({ event }, 'User ID not found');
@@ -94,26 +87,70 @@ const postbackEventHandler = async (
 		// ローディング表示
 		await lineService.showLoading(userId);
 
-		// 支払い記録の保存
-		const record = await expenseService.record({
-			userId,
-			date: now,
-			category: data.category,
-			content: data.content,
-			amount: data.amount,
-		});
+		switch (data.action) {
+			case ACTION_SELECT_CATEGORY: {
+				// カテゴリ選択を選択して記録
 
-		log.info({ record }, 'Expense recorded to Firestore');
+				// カテゴリ、支払い内容、金額がない
+				if (!data.category || !data.content || !data.amount) {
+					log.warn({ data }, 'Missing data in postback');
+					await lineService.replyText(event.replyToken, 'エラーが発生しました');
+					return;
+				}
 
-		// 今月の集計取得
-		const monthlySummary = await expenseService.getMonthlySummary(userId, now);
+				// 支払い記録の保存
+				const record = await expenseService.record({
+					userId,
+					date: now,
+					category: data.category,
+					content: data.content,
+					amount: data.amount,
+				});
 
-		await lineService.replyWithCompletionAndSummary(event.replyToken, {
-			content: data.content,
-			category: data.category,
-			amount: data.amount,
-			monthlyTotal: monthlySummary.totalAmount,
-		});
+				log.info({ record }, 'Expense recorded to Firestore');
+
+				// 今月の集計取得
+				const monthlySummary = await expenseService.getMonthlySummary(userId, now);
+
+				await lineService.replyWithCompletionAndSummary(event.replyToken, {
+					content: data.content,
+					category: data.category,
+					amount: data.amount,
+					monthlyTotal: monthlySummary.totalAmount,
+				});
+				break;
+			}
+
+			case ACTION_CURRENT_MONTH_SUMMARY: {
+				// 今月の集計を表示
+				const currentSummary = await expenseService.getMonthlySummaryWithDetails(userId, now);
+				await lineService.replyText(event.replyToken, formatSummaryMessage('今月', currentSummary));
+				break;
+			}
+
+			case ACTION_LAST_MONTH_SUMMARY: {
+				// 先月の集計を表示
+				const lastMonthDate = dayjs.tz(now, 'Asia/Tokyo').subtract(1, 'month').toDate();
+				const lastSummary = await expenseService.getMonthlySummaryWithDetails(
+					userId,
+					lastMonthDate,
+				);
+				await lineService.replyText(event.replyToken, formatSummaryMessage('先月', lastSummary));
+				break;
+			}
+
+			case ACTION_HOW_TO_USE: {
+				// 使い方を表示
+				await lineService.replyText(event.replyToken, HOW_TO_USE_MESSAGE);
+				break;
+			}
+
+			default: {
+				log.error({ action: data.action }, 'Unknown postback action');
+				await lineService.replyText(event.replyToken, 'エラーが発生しました');
+				break;
+			}
+		}
 	} catch (error) {
 		log.error({ err: error, event }, 'Failed to handle postback');
 		await lineService.replyText(event.replyToken, '記録に失敗しました。もう一度試してください。');
