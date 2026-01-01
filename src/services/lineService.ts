@@ -5,7 +5,7 @@ import {
 	type QuickReplyItem,
 	type TextMessage,
 } from '@line/bot-sdk';
-import { ExpenseCategory, toExpenseCategoryLabel } from '../types/expense';
+import { PaymentCategory, toPaymentCategoryLabel } from '../types/payment';
 import { ACTION_SELECT_CATEGORY, type PostbackData } from '../types/postback';
 import logger from '../utils/logger';
 
@@ -60,7 +60,7 @@ class LineService {
 		amount: number,
 	): Promise<void> {
 		try {
-			const quickReplyItems: QuickReplyItem[] = Object.values(ExpenseCategory).map((category) => {
+			const quickReplyItems: QuickReplyItem[] = Object.values(PaymentCategory).map((category) => {
 				const data: PostbackData = {
 					action: ACTION_SELECT_CATEGORY,
 					content,
@@ -71,9 +71,9 @@ class LineService {
 					type: 'action',
 					action: {
 						type: 'postback',
-						label: toExpenseCategoryLabel(category),
+						label: toPaymentCategoryLabel(category),
 						data: JSON.stringify(data),
-						displayText: toExpenseCategoryLabel(category),
+						displayText: toPaymentCategoryLabel(category),
 					},
 				};
 			});
@@ -108,7 +108,7 @@ class LineService {
 	async replyWithCompletionAndSummary(
 		replyToken: string,
 		data: {
-			category: ExpenseCategory;
+			category: PaymentCategory;
 			content: string;
 			amount: number;
 			monthlyTotal: number;
@@ -119,7 +119,7 @@ class LineService {
 				type: 'text',
 				text: [
 					`記録したよ！`,
-					`${toExpenseCategoryLabel(
+					`${toPaymentCategoryLabel(
 						data.category,
 					)}： ${data.content} ${data.amount.toLocaleString()}円`,
 					`今月は${data.monthlyTotal.toLocaleString()}円支払ったよ`,

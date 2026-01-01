@@ -1,7 +1,7 @@
 import { HTTPFetchError, type MessageAPIResponseBase, type webhook } from '@line/bot-sdk';
 import type { Request, Response } from 'express';
-import expenseService from '../services/expenseService';
 import lineService from '../services/lineService';
+import paymentService from '../services/paymentService';
 import { formatSummaryMessage, HOW_TO_USE_MESSAGE } from '../templates/messages';
 import {
 	ACTION_CURRENT_MONTH_SUMMARY,
@@ -99,7 +99,7 @@ const postbackEventHandler = async (
 				}
 
 				// 支払い記録の保存
-				const record = await expenseService.record({
+				const record = await paymentService.record({
 					userId,
 					date: now,
 					category: data.category,
@@ -107,10 +107,10 @@ const postbackEventHandler = async (
 					amount: data.amount,
 				});
 
-				log.info({ record }, 'Expense recorded to Firestore');
+				log.info({ record }, 'Payment recorded to Firestore');
 
 				// 今月の集計取得
-				const monthlySummary = await expenseService.getMonthlySummary(userId, now);
+				const monthlySummary = await paymentService.getMonthlySummary(userId, now);
 
 				await lineService.replyWithCompletionAndSummary(event.replyToken, {
 					content: data.content,
@@ -123,7 +123,7 @@ const postbackEventHandler = async (
 
 			case ACTION_CURRENT_MONTH_SUMMARY: {
 				// 今月の集計を表示
-				const currentSummary = await expenseService.getMonthlySummaryWithDetails(userId, now);
+				const currentSummary = await paymentService.getMonthlySummaryWithDetails(userId, now);
 				await lineService.replyText(event.replyToken, formatSummaryMessage('今月', currentSummary));
 				break;
 			}
@@ -131,7 +131,7 @@ const postbackEventHandler = async (
 			case ACTION_LAST_MONTH_SUMMARY: {
 				// 先月の集計を表示
 				const lastMonthDate = dayjs.tz(now, 'Asia/Tokyo').subtract(1, 'month').toDate();
-				const lastSummary = await expenseService.getMonthlySummaryWithDetails(
+				const lastSummary = await paymentService.getMonthlySummaryWithDetails(
 					userId,
 					lastMonthDate,
 				);

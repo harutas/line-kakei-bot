@@ -1,8 +1,8 @@
 import {
-	ExpenseCategory,
-	ExpenseCategoryLabelMap,
-	type ExpenseCategory as ExpenseCategoryType,
-} from '../types/expense';
+	PaymentCategory,
+	PaymentCategoryLabelMap,
+	type PaymentCategory as PaymentCategoryType,
+} from '../types/payment';
 
 /**
  * 集計メッセージをフォーマット
@@ -11,14 +11,14 @@ export const formatSummaryMessage = (
 	period: string,
 	summary: {
 		totalAmount: number;
-		categoryTotals: Record<ExpenseCategoryType, number>;
+		categoryTotals: Record<PaymentCategoryType, number>;
 		recordCount: number;
 	},
 ): string => {
 	// カテゴリ別の内訳を動的に生成
-	const categoryLines = Object.values(ExpenseCategory).map((category) => {
-		const label = ExpenseCategoryLabelMap[category];
-		const amount = summary.categoryTotals[category];
+	const categoryLines = Object.values(PaymentCategory).map((category) => {
+		const label = PaymentCategoryLabelMap[category];
+		const amount = summary.categoryTotals[category] || 0;
 		return `${label}: ${amount.toLocaleString()}円`;
 	});
 

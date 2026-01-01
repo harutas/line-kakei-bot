@@ -10,6 +10,12 @@ class FirestoreService {
 	public firestore() {
 		return this._firestore;
 	}
+
+	public async runTransaction<T>(
+		transactionalFunction: (transaction: FirebaseFirestore.Transaction) => Promise<T>,
+	): Promise<T> {
+		return this._firestore.runTransaction(transactionalFunction);
+	}
 }
 
 export default new FirestoreService(firebaseService);
