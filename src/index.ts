@@ -1,6 +1,5 @@
 import express, { type Application, type NextFunction, type Request, type Response } from 'express';
 import { handleWebhook } from './handlers/webhook';
-import { allowedLineUser } from './middlewares/allowedLineUser';
 import { httpLogger } from './middlewares/httpLogger';
 import { lineSignature } from './middlewares/lineSignature';
 import logger from './utils/logger';
@@ -18,7 +17,7 @@ app.get('/', (_req: Request, res: Response) => {
 });
 
 // LINE Messaging API の Webhookハンドラ
-app.post('/webhook', lineSignature, allowedLineUser, handleWebhook);
+app.post('/webhook', lineSignature, handleWebhook);
 
 // 404
 app.use((_req: Request, res: Response) => {
