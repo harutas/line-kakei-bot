@@ -38,10 +38,7 @@ const textEventHandler = async (
 
 	if (!parsed) {
 		// パースできない場合はヘルプメッセージ
-		await lineService.replyText(
-			event.replyToken,
-			'支払い内容と金額を入力してね！\n\n例：\nランチ\n1200\n\nまたは：\nランチ 1200',
-		);
+		await lineService.replyText(event.replyToken, HOW_TO_USE_MESSAGE);
 		return;
 	}
 

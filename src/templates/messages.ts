@@ -33,6 +33,29 @@ export const formatSummaryMessage = (
 };
 
 /**
+ * カテゴリ選択メッセージをフォーマット
+ */
+export const formatCategorySelectionMessage = (content: string, amount: number): string => {
+	return `「${content}」で${amount.toLocaleString()}円だね。\nカテゴリを選んでね！`;
+};
+
+/**
+ * 記録完了メッセージをフォーマット
+ */
+export const formatRecordCompletionMessage = (
+	category: PaymentCategoryType,
+	content: string,
+	amount: number,
+	monthlyTotal: number,
+): string => {
+	return [
+		'記録したよ！',
+		`${PaymentCategoryLabelMap[category]}： ${content} ${amount.toLocaleString()}円`,
+		`今月は${monthlyTotal.toLocaleString()}円支払ったよ`,
+	].join('\n');
+};
+
+/**
  * 使い方メッセージ
  */
 export const HOW_TO_USE_MESSAGE = [

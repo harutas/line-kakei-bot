@@ -5,6 +5,10 @@ import {
 	type QuickReplyItem,
 	type TextMessage,
 } from '@line/bot-sdk';
+import {
+	formatCategorySelectionMessage,
+	formatRecordCompletionMessage,
+} from '../templates/messages';
 import { PaymentCategory, toPaymentCategoryLabel } from '../types/payment';
 import { ACTION_SELECT_CATEGORY, type PostbackData } from '../types/postback';
 import logger from '../utils/logger';
@@ -84,7 +88,7 @@ class LineService {
 
 			const message: TextMessage = {
 				type: 'text',
-				text: `「${content}」で${amount.toLocaleString()}円だね。\nカテゴリを選んでね！`,
+				text: formatCategorySelectionMessage(content, amount),
 				quickReply,
 			};
 
@@ -117,13 +121,12 @@ class LineService {
 		try {
 			const message: TextMessage = {
 				type: 'text',
-				text: [
-					`記録したよ！`,
-					`${toPaymentCategoryLabel(
-						data.category,
-					)}： ${data.content} ${data.amount.toLocaleString()}円`,
-					`今月は${data.monthlyTotal.toLocaleString()}円支払ったよ`,
-				].join('\n'),
+				text: formatRecordCompletionMessage(
+					data.category,
+					data.content,
+					data.amount,
+					data.monthlyTotal,
+				),
 			};
 
 			await this.client.replyMessage({
