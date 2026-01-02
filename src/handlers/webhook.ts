@@ -297,7 +297,7 @@ const postbackEventHandler = async (
 
 				const payment = await paymentRepository.findById(userId, data.paymentId);
 				if (!payment) {
-					await lineService.replyText(event.replyToken, 'この支払いは既に削除されてるみたい');
+					await lineService.replyText(event.replyToken, 'この支払いはすでに削除されています');
 					return;
 				}
 
