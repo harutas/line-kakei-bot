@@ -9,9 +9,12 @@ import { PaymentCategory, toPaymentCategoryLabel } from '../types/payment';
 import {
 	ACTION_CANCEL_DELETE,
 	ACTION_CONFIRM_DELETE,
+	ACTION_RECORD_TODAY,
 	ACTION_SELECT_CATEGORY,
+	ACTION_SELECT_DATE,
 	type PostbackData,
 } from '../types/postback';
+import { getMinPaymentDate, getTodayDate } from '../utils/datetime';
 import { buildPaymentListBubbles } from '../utils/flexMessageBuilder';
 import logger from '../utils/logger';
 
@@ -102,6 +105,73 @@ class LineService {
 			});
 		} catch (error) {
 			log.error({ err: error, replyToken }, 'Failed to send category selection');
+			throw error;
+		}
+	}
+
+	/**
+	 * 日付選択確認メッセージを送信
+	 * @param replyToken - 返信トークン
+	 * @param content - 支払い内容
+	 * @param amount - 金額
+	 * @param category - 選択されたカテゴリ
+	 */
+	async replyWithDateSelection(
+		replyToken: string,
+		content: string,
+		amount: number,
+		category: PaymentCategory,
+	): Promise<void> {
+		try {
+			const todayData: PostbackData = {
+				action: ACTION_RECORD_TODAY,
+				content,
+				amount,
+				category,
+			};
+
+			const selectDateData: PostbackData = {
+				action: ACTION_SELECT_DATE,
+				content,
+				amount,
+				category,
+			};
+
+			const minDate = getMinPaymentDate();
+			const maxDate = getTodayDate();
+
+			const message: messagingApi.TemplateMessage = {
+				type: 'template',
+				altText: '日付を選択してください',
+				template: {
+					type: 'buttons',
+					text: `登録する日付を選択してね`,
+					actions: [
+						{
+							type: 'postback',
+							label: '今日で登録',
+							data: JSON.stringify(todayData),
+							displayText: '今日で登録',
+						},
+						{
+							type: 'datetimepicker',
+							label: '日付を選択',
+							data: JSON.stringify(selectDateData),
+							mode: 'datetime',
+							initial: maxDate,
+							max: maxDate,
+							min: minDate,
+						},
+					],
+				},
+			};
+
+			await this.client.replyMessage({
+				replyToken,
+				messages: [message],
+			});
+		} catch (error) {
+			log.error({ err: error, replyToken }, 'Failed to send date selection');
 			throw error;
 		}
 	}

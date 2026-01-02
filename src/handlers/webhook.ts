@@ -12,11 +12,13 @@ import {
 	ACTION_HOW_TO_USE,
 	ACTION_LAST_MONTH_SUMMARY,
 	ACTION_PAYMENT_DETAIL,
+	ACTION_RECORD_TODAY,
 	ACTION_SELECT_CATEGORY,
+	ACTION_SELECT_DATE,
 	ACTION_VIEW_WEEK_PAYMENTS,
 	type PostbackData,
 } from '../types/postback';
-import { dayjs } from '../utils/datetime';
+import { dayjs, isValidPaymentDate, parsePaymentDate } from '../utils/datetime';
 import { parseExpenseInput } from '../utils/expenseParser';
 import logger from '../utils/logger';
 
@@ -92,15 +94,35 @@ const postbackEventHandler = async (
 				// ローディング表示
 				await lineService.showLoading(userId);
 
-				// カテゴリ選択を選択して記録
-				// カテゴリ、支払い内容、金額がない
+				// データバリデーション
 				if (!data.category || !data.content || !data.amount) {
 					log.warn({ data }, 'Missing data in postback');
 					await lineService.replyText(event.replyToken, 'エラーが発生しました');
 					return;
 				}
 
-				// 支払い記録の保存
+				// 日付選択確認を表示
+				await lineService.replyWithDateSelection(
+					event.replyToken,
+					data.content,
+					data.amount,
+					data.category,
+				);
+				break;
+			}
+
+			case ACTION_RECORD_TODAY: {
+				// ローディング表示
+				await lineService.showLoading(userId);
+
+				// データバリデーション
+				if (!data.category || !data.content || !data.amount) {
+					log.warn({ data }, 'Missing data in postback');
+					await lineService.replyText(event.replyToken, 'エラーが発生しました');
+					return;
+				}
+
+				// 今日の日付で支払いを記録
 				const record = await paymentService.record({
 					userId,
 					date: now,
@@ -113,6 +135,59 @@ const postbackEventHandler = async (
 
 				// 今月の集計取得
 				const monthlySummary = await paymentService.getMonthlySummary(userId, now);
+
+				await lineService.replyWithCompletionAndSummary(event.replyToken, {
+					content: data.content,
+					category: data.category,
+					amount: data.amount,
+					monthlyTotal: monthlySummary.totalAmount,
+				});
+				break;
+			}
+
+			case ACTION_SELECT_DATE: {
+				// ローディング表示
+				await lineService.showLoading(userId);
+
+				// データバリデーション
+				if (!data.category || !data.content || !data.amount) {
+					log.warn({ data }, 'Missing data in postback');
+					await lineService.replyText(event.replyToken, 'エラーが発生しました');
+					return;
+				}
+
+				// 選択された日付を取得
+				const selectedDate = event.postback.params?.datetime;
+				if (!selectedDate) {
+					log.warn({ data }, 'No date selected');
+					await lineService.replyText(event.replyToken, '日付が選択されていません');
+					return;
+				}
+
+				// 日付範囲のバリデーション
+				if (!isValidPaymentDate(selectedDate)) {
+					log.warn({ selectedDate }, 'Invalid date selected');
+					await lineService.replyText(
+						event.replyToken,
+						'日付は今日から30日前までの範囲で選択してください',
+					);
+					return;
+				}
+
+				// 日付をパースして支払いを記録
+				const paymentDate = parsePaymentDate(selectedDate);
+				const record = await paymentService.record({
+					userId,
+					date: paymentDate,
+					category: data.category,
+					content: data.content,
+					amount: data.amount,
+				});
+
+				log.info({ record, selectedDate }, 'Payment recorded with selected date');
+
+				// 選択された日付の月の集計取得
+				const monthlySummary = await paymentService.getMonthlySummary(userId, paymentDate);
 
 				await lineService.replyWithCompletionAndSummary(event.replyToken, {
 					content: data.content,

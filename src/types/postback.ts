@@ -1,6 +1,8 @@
 import type { PaymentCategory } from './payment';
 
 export const ACTION_SELECT_CATEGORY = 'ACTION_SELECT_CATEGORY';
+export const ACTION_SELECT_DATE = 'ACTION_SELECT_DATE';
+export const ACTION_RECORD_TODAY = 'ACTION_RECORD_TODAY';
 export const ACTION_CURRENT_MONTH_SUMMARY = 'ACTION_CURRENT_MONTH_SUMMARY';
 export const ACTION_LAST_MONTH_SUMMARY = 'ACTION_LAST_MONTH_SUMMARY';
 export const ACTION_HOW_TO_USE = 'ACTION_HOW_TO_USE';
@@ -15,6 +17,8 @@ export const ACTION_CANCEL_DELETE = 'ACTION_CANCEL_DELETE';
  */
 export type PostbackAction =
 	| typeof ACTION_SELECT_CATEGORY
+	| typeof ACTION_SELECT_DATE
+	| typeof ACTION_RECORD_TODAY
 	| typeof ACTION_CURRENT_MONTH_SUMMARY
 	| typeof ACTION_LAST_MONTH_SUMMARY
 	| typeof ACTION_HOW_TO_USE
@@ -33,4 +37,5 @@ export interface PostbackData {
 	amount?: number; // 金額（カテゴリ選択時のみ必須）
 	category?: PaymentCategory; // 選択されたカテゴリ（postback時にセット）
 	paymentId?: string; // 支払いID（削除・編集時に使用）
+	date?: string; // 日時（ISO形式: YYYY-MM-DDTHH:mm）
 }
