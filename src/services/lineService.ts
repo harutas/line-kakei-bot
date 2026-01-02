@@ -190,6 +190,7 @@ class LineService {
 			content: string;
 			amount: number;
 			monthlyTotal: number;
+			paymentDate: Date;
 		},
 	): Promise<void> {
 		try {
@@ -200,6 +201,7 @@ class LineService {
 					data.content,
 					data.amount,
 					data.monthlyTotal,
+					data.paymentDate,
 				),
 			};
 

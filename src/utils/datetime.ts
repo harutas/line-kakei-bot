@@ -50,3 +50,21 @@ export const isValidPaymentDate = (dateStr: string): boolean => {
 export const parsePaymentDate = (dateStr: string): Date => {
 	return dayjs.tz(dateStr, 'Asia/Tokyo').toDate();
 };
+
+/**
+ * 月の表示形式を取得（今月なら「今月」、それ以外は「YYYY年M月」）
+ * @param date - 対象の日付
+ * @returns 月の表示文字列
+ */
+export const formatMonthDisplay = (date: Date): string => {
+	const targetMonth = dayjs.tz(date, 'Asia/Tokyo');
+	const currentMonth = dayjs.tz(new Date(), 'Asia/Tokyo');
+
+	// 年月が一致する場合は「今月」
+	if (targetMonth.isSame(currentMonth, 'month')) {
+		return '今月';
+	}
+
+	// それ以外は「YYYY年M月」形式
+	return targetMonth.format('YYYY年M月');
+};

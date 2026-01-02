@@ -3,6 +3,7 @@ import {
 	PaymentCategoryLabelMap,
 	type PaymentCategory as PaymentCategoryType,
 } from '../types/payment';
+import { formatMonthDisplay } from '../utils/datetime';
 
 /**
  * 集計メッセージをフォーマット
@@ -47,11 +48,13 @@ export const formatRecordCompletionMessage = (
 	content: string,
 	amount: number,
 	monthlyTotal: number,
+	paymentDate: Date,
 ): string => {
+	const monthDisplay = formatMonthDisplay(paymentDate);
 	return [
 		'記録したよ！',
 		`${PaymentCategoryLabelMap[category]}： ${content} ${amount.toLocaleString()}円`,
-		`今月は${monthlyTotal.toLocaleString()}円支払ったよ`,
+		`${monthDisplay}は${monthlyTotal.toLocaleString()}円支払ったよ`,
 	].join('\n');
 };
 

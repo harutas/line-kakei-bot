@@ -18,7 +18,7 @@ import {
 	ACTION_VIEW_WEEK_PAYMENTS,
 	type PostbackData,
 } from '../types/postback';
-import { dayjs, isValidPaymentDate, parsePaymentDate } from '../utils/datetime';
+import { dayjs, formatMonthDisplay, isValidPaymentDate, parsePaymentDate } from '../utils/datetime';
 import { parseExpenseInput } from '../utils/expenseParser';
 import logger from '../utils/logger';
 
@@ -141,6 +141,7 @@ const postbackEventHandler = async (
 					category: data.category,
 					amount: data.amount,
 					monthlyTotal: monthlySummary.totalAmount,
+					paymentDate: now,
 				});
 				break;
 			}
@@ -194,6 +195,7 @@ const postbackEventHandler = async (
 					category: data.category,
 					amount: data.amount,
 					monthlyTotal: monthlySummary.totalAmount,
+					paymentDate: paymentDate,
 				});
 				break;
 			}
@@ -299,14 +301,17 @@ const postbackEventHandler = async (
 					return;
 				}
 
+				// 削除前に支払い日付を保存
+				const deletedPaymentDate = payment.date;
 				await paymentService.deletePayment(userId, data.paymentId);
 				log.info({ paymentId: data.paymentId }, 'Payment deleted from Firestore');
 
-				// 削除後の月次集計を取得
-				const summary = await paymentService.getMonthlySummary(userId, now);
+				// 削除した支払いの月次集計を取得
+				const summary = await paymentService.getMonthlySummary(userId, deletedPaymentDate);
+				const monthDisplay = formatMonthDisplay(deletedPaymentDate);
 				await lineService.replyText(
 					event.replyToken,
-					`削除しました！\n今月は${summary.totalAmount.toLocaleString()}円支払ったよ`,
+					`削除しました！\n${monthDisplay}は${summary.totalAmount.toLocaleString()}円支払ったよ`,
 				);
 				break;
 			}
