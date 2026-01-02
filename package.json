@@ -10,8 +10,10 @@
     "lint": "biome lint ./src",
     "format": "biome format --write ./src",
     "check": "biome check ./src",
-    "setup:richmenu": "dotenvx run -f .env.development -- ts-node scripts/setup-rich-menu.ts",
-    "delete:richmenu": "dotenvx run -f .env.development -- ts-node scripts/delete-rich-menu.ts"
+    "setup:richmenu:dev": "dotenvx run -f .env.development -- ts-node scripts/setup-rich-menu.ts",
+    "delete:richmenu:dev": "dotenvx run -f .env.development -- ts-node scripts/delete-rich-menu.ts",
+    "setup:richmenu:prod": "dotenvx run -f .env.production -- ts-node scripts/setup-rich-menu.ts",
+    "delete:richmenu:prod": "dotenvx run -f .env.production -- ts-node scripts/delete-rich-menu.ts"
   },
   "keywords": [],
   "author": "",

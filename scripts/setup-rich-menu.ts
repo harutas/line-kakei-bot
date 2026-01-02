@@ -1,10 +1,10 @@
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import { messagingApi } from '@line/bot-sdk';
-import * as fs from 'fs';
-import * as path from 'path';
 import {
 	ACTION_CURRENT_MONTH_SUMMARY,
 	ACTION_HOW_TO_USE,
-	ACTION_LAST_MONTH_SUMMARY,
+	ACTION_VIEW_WEEK_PAYMENTS,
 } from '../src/types/postback';
 
 const channelAccessToken = process.env.LINE_CHANNEL_ACCESS_TOKEN || '';
@@ -31,7 +31,7 @@ async function setupRichMenu() {
 			await client.cancelDefaultRichMenu();
 			await client.deleteRichMenu(defaultMenu.richMenuId);
 		}
-	} catch (error) {
+	} catch (_error) {
 		console.log('No existing default rich menu found');
 	}
 
@@ -49,16 +49,16 @@ async function setupRichMenu() {
 				bounds: { x: 0, y: 0, width: 833, height: 843 },
 				action: {
 					type: 'postback' as const,
-					data: JSON.stringify({ action: ACTION_CURRENT_MONTH_SUMMARY }),
-					displayText: '今月の支払い',
+					data: JSON.stringify({ action: ACTION_VIEW_WEEK_PAYMENTS }),
+					displayText: '今週の支払い',
 				},
 			},
 			{
 				bounds: { x: 833, y: 0, width: 834, height: 843 },
 				action: {
 					type: 'postback' as const,
-					data: JSON.stringify({ action: ACTION_LAST_MONTH_SUMMARY }),
-					displayText: '先月の支払い',
+					data: JSON.stringify({ action: ACTION_CURRENT_MONTH_SUMMARY }),
+					displayText: '今月の支払い',
 				},
 			},
 			{
@@ -99,7 +99,7 @@ async function setupRichMenu() {
 	}
 
 	const imageBuffer = fs.readFileSync(imagePath);
-		const image = new Blob([imageBuffer], { type: 'image/png' });
+	const image = new Blob([imageBuffer], { type: 'image/png' });
 	await blobClient.setRichMenuImage(richMenuId, image);
 	console.log('✓ Image uploaded successfully');
 
