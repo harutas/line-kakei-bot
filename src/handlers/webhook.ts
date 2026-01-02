@@ -1,13 +1,19 @@
 import { HTTPFetchError, type MessageAPIResponseBase, type webhook } from '@line/bot-sdk';
 import type { Request, Response } from 'express';
+import paymentRepository from '../databases/repositories/PaymentRepository';
 import lineService from '../services/lineService';
 import paymentService from '../services/paymentService';
 import { formatSummaryMessage, HOW_TO_USE_MESSAGE } from '../templates/messages';
 import {
+	ACTION_CANCEL_DELETE,
+	ACTION_CONFIRM_DELETE,
 	ACTION_CURRENT_MONTH_SUMMARY,
+	ACTION_DELETE_PAYMENT,
 	ACTION_HOW_TO_USE,
 	ACTION_LAST_MONTH_SUMMARY,
+	ACTION_PAYMENT_DETAIL,
 	ACTION_SELECT_CATEGORY,
+	ACTION_VIEW_WEEK_PAYMENTS,
 	type PostbackData,
 } from '../types/postback';
 import { dayjs } from '../utils/datetime';
@@ -81,13 +87,12 @@ const postbackEventHandler = async (
 			return;
 		}
 
-		// ローディング表示
-		await lineService.showLoading(userId);
-
 		switch (data.action) {
 			case ACTION_SELECT_CATEGORY: {
-				// カテゴリ選択を選択して記録
+				// ローディング表示
+				await lineService.showLoading(userId);
 
+				// カテゴリ選択を選択して記録
 				// カテゴリ、支払い内容、金額がない
 				if (!data.category || !data.content || !data.amount) {
 					log.warn({ data }, 'Missing data in postback');
@@ -119,6 +124,9 @@ const postbackEventHandler = async (
 			}
 
 			case ACTION_CURRENT_MONTH_SUMMARY: {
+				// ローディング表示
+				await lineService.showLoading(userId);
+
 				// 今月の集計を表示
 				const currentSummary = await paymentService.getMonthlySummaryWithDetails(userId, now);
 				await lineService.replyText(event.replyToken, formatSummaryMessage('今月', currentSummary));
@@ -126,6 +134,9 @@ const postbackEventHandler = async (
 			}
 
 			case ACTION_LAST_MONTH_SUMMARY: {
+				// ローディング表示
+				await lineService.showLoading(userId);
+
 				// 先月の集計を表示
 				const lastMonthDate = dayjs.tz(now, 'Asia/Tokyo').subtract(1, 'month').toDate();
 				const lastSummary = await paymentService.getMonthlySummaryWithDetails(
@@ -137,8 +148,96 @@ const postbackEventHandler = async (
 			}
 
 			case ACTION_HOW_TO_USE: {
+				// ローディング表示
+				await lineService.showLoading(userId);
+
 				// 使い方を表示
 				await lineService.replyText(event.replyToken, HOW_TO_USE_MESSAGE);
+				break;
+			}
+
+			case ACTION_VIEW_WEEK_PAYMENTS: {
+				// ローディング表示
+				await lineService.showLoading(userId);
+
+				// 今週の支払いを表示
+				const payments = await paymentService.getWeekPayments(userId, now);
+				await lineService.replyWithPaymentList(event.replyToken, payments);
+				break;
+			}
+
+			case ACTION_PAYMENT_DETAIL: {
+				// ローディング表示
+				await lineService.showLoading(userId);
+
+				if (!data.paymentId) {
+					log.warn({ data }, 'Missing paymentId in postback');
+					await lineService.replyText(event.replyToken, 'エラーが発生しました');
+					return;
+				}
+
+				const payment = await paymentRepository.findById(userId, data.paymentId);
+				if (!payment) {
+					await lineService.replyText(event.replyToken, 'この支払いはすでに削除されています');
+					return;
+				}
+
+				await lineService.replyWithPaymentDetail(event.replyToken, payment);
+				break;
+			}
+
+			case ACTION_DELETE_PAYMENT: {
+				// ローディング表示
+				await lineService.showLoading(userId);
+
+				// 削除確認を表示
+				if (!data.paymentId) {
+					log.warn({ data }, 'Missing paymentId in postback');
+					await lineService.replyText(event.replyToken, 'エラーが発生しました');
+					return;
+				}
+
+				const payment = await paymentRepository.findById(userId, data.paymentId);
+				if (!payment) {
+					await lineService.replyText(event.replyToken, 'この支払いはすでに削除されています');
+					return;
+				}
+
+				await lineService.replyWithDeleteConfirmation(event.replyToken, payment);
+				break;
+			}
+
+			case ACTION_CONFIRM_DELETE: {
+				// ローディング表示
+				await lineService.showLoading(userId);
+
+				// 削除実行
+				if (!data.paymentId) {
+					log.warn({ data }, 'Missing paymentId in postback');
+					await lineService.replyText(event.replyToken, 'エラーが発生しました');
+					return;
+				}
+
+				const payment = await paymentRepository.findById(userId, data.paymentId);
+				if (!payment) {
+					await lineService.replyText(event.replyToken, 'この支払いは既に削除されてるみたい');
+					return;
+				}
+
+				await paymentService.deletePayment(userId, data.paymentId);
+				log.info({ paymentId: data.paymentId }, 'Payment deleted from Firestore');
+
+				// 削除後の月次集計を取得
+				const summary = await paymentService.getMonthlySummary(userId, now);
+				await lineService.replyText(
+					event.replyToken,
+					`削除しました！\n今月は${summary.totalAmount.toLocaleString()}円支払ったよ`,
+				);
+				break;
+			}
+
+			case ACTION_CANCEL_DELETE: {
+				// 削除キャンセル時は何もしない
 				break;
 			}
 
@@ -150,7 +249,7 @@ const postbackEventHandler = async (
 		}
 	} catch (error) {
 		log.error({ err: error, event }, 'Failed to handle postback');
-		await lineService.replyText(event.replyToken, '記録に失敗しました。もう一度試してください。');
+		await lineService.replyText(event.replyToken, 'エラーが発生しました。もう一度試してください。');
 	}
 };
 

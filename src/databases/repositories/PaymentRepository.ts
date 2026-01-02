@@ -1,6 +1,7 @@
 import type { Firestore, Transaction } from 'firebase-admin/firestore';
 import { Timestamp } from 'firebase-admin/firestore';
 import firestoreService from '../../services/firestoreService';
+import type { PaymentCategory } from '../../types/payment';
 import { dayjs } from '../../utils/datetime';
 import { type PaymentCreateParams, PaymentEntity } from '../entities/PaymentEntity';
 
@@ -83,31 +84,45 @@ export class PaymentRepository {
 	/**
 	 * ユーザー＋期間検索
 	 */
-	async findByUserAndDateRange(userId: string, from: Date, to: Date): Promise<PaymentEntity[]> {
+	async findByUserAndDateRange(
+		userId: string,
+		from: Date,
+		to: Date,
+		options?: {
+			orderDirection?: 'asc' | 'desc';
+			limit?: number;
+		},
+	): Promise<PaymentEntity[]> {
 		const fromYearMonth = dayjs.tz(from, 'Asia/Tokyo').format('YYYY-MM');
 		const toYearMonth = dayjs.tz(to, 'Asia/Tokyo').format('YYYY-MM');
+		const orderDirection = options?.orderDirection ?? 'asc';
 
-		const snapshot = await this.firestore
+		let query = this.firestore
 			.collection('Users')
 			.doc(userId)
 			.collection('Payments')
 			.where('yearMonth', '>=', fromYearMonth)
 			.where('yearMonth', '<=', toYearMonth)
-			.orderBy('yearMonth', 'asc')
-			.orderBy('date', 'asc')
-			.get();
+			.orderBy('yearMonth', orderDirection)
+			.orderBy('date', orderDirection);
+
+		if (options?.limit) {
+			query = query.limit(options.limit);
+		}
+
+		const snapshot = await query.get();
 
 		return snapshot.docs.map((doc) => this.toEntity(doc.id, doc.data()));
 	}
 
 	/**
-	 * 削除 - 将来実装用
+	 * 削除
 	 */
 	async delete(
 		userId: string,
 		id: string,
 		transaction?: Transaction,
-	): Promise<{ amount: number; category: string; yearMonth: string }> {
+	): Promise<{ amount: number; category: PaymentCategory; yearMonth: string }> {
 		const paymentRef = this.firestore
 			.collection('Users')
 			.doc(userId)

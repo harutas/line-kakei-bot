@@ -60,6 +60,42 @@ export class PaymentService {
 			recordCount: summary.recordCount,
 		};
 	}
+
+	/**
+	 * 今週の支払い一覧を取得（日曜始まり）
+	 */
+	async getWeekPayments(userId: string, baseDate: Date) {
+		// 今週の開始日（日曜 00:00:00）を計算
+		const startOfWeek = dayjs.tz(baseDate, 'Asia/Tokyo').startOf('week').toDate();
+
+		// 今週の終了日（土曜 23:59:59）を計算
+		const endOfWeek = dayjs.tz(baseDate, 'Asia/Tokyo').endOf('week').toDate();
+
+		// DB側で降順ソート、最新25件に制限
+		return await this.paymentRepository.findByUserAndDateRange(userId, startOfWeek, endOfWeek, {
+			orderDirection: 'desc',
+			limit: 25,
+		});
+	}
+
+	/**
+	 * 支払いを削除（トランザクション処理）
+	 */
+	async deletePayment(userId: string, paymentId: string) {
+		return firestoreService.runTransaction(async (transaction) => {
+			// 1. Paymentを削除し、削除前の情報を取得
+			const deletedInfo = await this.paymentRepository.delete(userId, paymentId, transaction);
+
+			// 2. MonthlySummaryを減算
+			await this.monthlySummaryRepository.decrementSummary(
+				userId,
+				deletedInfo.yearMonth,
+				deletedInfo.category,
+				deletedInfo.amount,
+				transaction,
+			);
+		});
+	}
 }
 
 export default new PaymentService(paymentRepository, monthlySummaryRepository);
