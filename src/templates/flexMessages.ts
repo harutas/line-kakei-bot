@@ -15,7 +15,7 @@ export function createPaymentListBubble(
 ): messagingApi.FlexBubble {
 	// 各支払いをボタンに変換
 	const buttons: messagingApi.FlexButton[] = payments.map((payment) => {
-		const dateStr = dayjs.tz(payment.date, 'Asia/Tokyo').format('M/D HH:mm');
+		const dateStr = dayjs.tz(payment.date, 'Asia/Tokyo').format('M/D');
 		const postbackData: PostbackData = {
 			action: ACTION_PAYMENT_DETAIL,
 			paymentId: payment.id,
