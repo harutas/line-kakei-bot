@@ -58,5 +58,17 @@ export const parseExpenseInput = (text: string): { content: string; amount: numb
 		}
 	}
 
+	// 形式3: スペースなし（末尾の数字を金額として扱う）
+	const match = trimmedText.match(/^(.+?)(\d[\d,]*円?)$/);
+	if (match) {
+		const content = match[1].trim();
+		const amountText = match[2];
+		const amount = cleanAmount(amountText);
+
+		if (content && amount !== null) {
+			return { content, amount };
+		}
+	}
+
 	return null;
 };
