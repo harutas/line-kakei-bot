@@ -1,7 +1,13 @@
 import type { messagingApi } from '@line/bot-sdk';
 import type { PaymentEntity } from '../databases/entities/PaymentEntity';
 import { toPaymentCategoryLabel } from '../types/payment';
-import { ACTION_DELETE_PAYMENT, ACTION_PAYMENT_DETAIL, type PostbackData } from '../types/postback';
+import {
+	ACTION_CANCEL_DELETE,
+	ACTION_CONFIRM_DELETE,
+	ACTION_DELETE_PAYMENT,
+	ACTION_PAYMENT_DETAIL,
+	type PostbackData,
+} from '../types/postback';
 import { dayjs } from '../utils/datetime';
 
 /**
@@ -200,3 +206,45 @@ export function createPaymentBubble(
 		},
 	};
 }
+
+/**
+ * 削除確認メッセージ
+ */
+export const formatDeleteConfirmation = (payment: PaymentEntity): messagingApi.TemplateMessage => {
+	const confirmData: PostbackData = {
+		action: ACTION_CONFIRM_DELETE,
+		paymentId: payment.id,
+	};
+
+	const cancelData: PostbackData = {
+		action: ACTION_CANCEL_DELETE,
+	};
+
+	return {
+		type: 'template',
+		altText: '削除確認',
+		template: {
+			type: 'confirm',
+			text: [
+				`${payment.content}`,
+				`¥${payment.amount.toLocaleString()}`,
+				``,
+				`この支出を削除しても大丈夫？`,
+			].join('\n'),
+			actions: [
+				{
+					type: 'postback',
+					label: 'はい',
+					data: JSON.stringify(confirmData),
+					displayText: '削除する',
+				},
+				{
+					type: 'postback',
+					label: 'いいえ',
+					data: JSON.stringify(cancelData),
+					displayText: 'キャンセル',
+				},
+			],
+		},
+	};
+};

@@ -1,3 +1,4 @@
+import type { MonthlySummaryEntity } from '../databases/entities/MonthlySummaryEntity';
 import type { PaymentCreateParams } from '../databases/entities/PaymentEntity';
 import monthlySummaryRepository, {
 	type MonthlySummaryRepository,
@@ -38,27 +39,11 @@ export class PaymentService {
 	/**
 	 * 今月の支払いサマリー取得
 	 */
-	async getMonthlySummary(userId: string, baseDate: Date) {
+	async getMonthlySummary(userId: string, baseDate: Date): Promise<MonthlySummaryEntity> {
 		const yearMonth = dayjs.tz(baseDate, 'Asia/Tokyo').format('YYYY-MM');
 		const summary = await this.monthlySummaryRepository.findByYearMonth(userId, yearMonth);
 
-		return {
-			totalAmount: summary.totalAmount,
-		};
-	}
-
-	/**
-	 * カテゴリ別集計を含む詳細な月次サマリー取得
-	 */
-	async getMonthlySummaryWithDetails(userId: string, baseDate: Date) {
-		const yearMonth = dayjs.tz(baseDate, 'Asia/Tokyo').format('YYYY-MM');
-		const summary = await this.monthlySummaryRepository.findByYearMonth(userId, yearMonth);
-
-		return {
-			totalAmount: summary.totalAmount,
-			categoryTotals: summary.categoryTotals,
-			recordCount: summary.recordCount,
-		};
+		return summary;
 	}
 
 	/**

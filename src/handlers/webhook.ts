@@ -3,7 +3,6 @@ import type { Request, Response } from 'express';
 import paymentRepository from '../databases/repositories/PaymentRepository';
 import lineService from '../services/lineService';
 import paymentService from '../services/paymentService';
-import { formatSummaryMessage, HOW_TO_USE_MESSAGE } from '../templates/messages';
 import {
 	ACTION_CANCEL_DELETE,
 	ACTION_CONFIRM_DELETE,
@@ -46,7 +45,7 @@ const textEventHandler = async (
 
 	if (!parsed) {
 		// パースできない場合はヘルプメッセージ
-		await lineService.replyText(event.replyToken, HOW_TO_USE_MESSAGE);
+		await lineService.replyWithHowToUse(event.replyToken);
 		return;
 	}
 
@@ -123,7 +122,7 @@ const postbackEventHandler = async (
 				}
 
 				// 今日の日付で支払いを記録
-				const record = await paymentService.record({
+				const payment = await paymentService.record({
 					userId,
 					date: now,
 					category: data.category,
@@ -131,17 +130,14 @@ const postbackEventHandler = async (
 					amount: data.amount,
 				});
 
-				log.info({ record }, 'Payment recorded to Firestore');
+				log.info({ payment }, 'Payment recorded to Firestore');
 
 				// 今月の集計取得
 				const monthlySummary = await paymentService.getMonthlySummary(userId, now);
 
 				await lineService.replyWithCompletionAndSummary(event.replyToken, {
-					content: data.content,
-					category: data.category,
-					amount: data.amount,
-					monthlyTotal: monthlySummary.totalAmount,
-					paymentDate: now,
+					payment,
+					monthlySummary,
 				});
 				break;
 			}
@@ -177,7 +173,7 @@ const postbackEventHandler = async (
 
 				// 日付をパースして支払いを記録
 				const paymentDate = parsePaymentDate(selectedDate);
-				const record = await paymentService.record({
+				const payment = await paymentService.record({
 					userId,
 					date: paymentDate,
 					category: data.category,
@@ -185,17 +181,14 @@ const postbackEventHandler = async (
 					amount: data.amount,
 				});
 
-				log.info({ record, selectedDate }, 'Payment recorded with selected date');
+				log.info({ payment, selectedDate }, 'Payment recorded with selected date');
 
 				// 選択された日付の月の集計取得
 				const monthlySummary = await paymentService.getMonthlySummary(userId, paymentDate);
 
 				await lineService.replyWithCompletionAndSummary(event.replyToken, {
-					content: data.content,
-					category: data.category,
-					amount: data.amount,
-					monthlyTotal: monthlySummary.totalAmount,
-					paymentDate: paymentDate,
+					payment,
+					monthlySummary,
 				});
 				break;
 			}
@@ -205,8 +198,8 @@ const postbackEventHandler = async (
 				await lineService.showLoading(userId);
 
 				// 今月の集計を表示
-				const currentSummary = await paymentService.getMonthlySummaryWithDetails(userId, now);
-				await lineService.replyText(event.replyToken, formatSummaryMessage('今月', currentSummary));
+				const currentSummary = await paymentService.getMonthlySummary(userId, now);
+				await lineService.replyWithMonthlySummary(event.replyToken, currentSummary);
 				break;
 			}
 
@@ -216,11 +209,8 @@ const postbackEventHandler = async (
 
 				// 先月の集計を表示
 				const lastMonthDate = dayjs.tz(now, 'Asia/Tokyo').subtract(1, 'month').toDate();
-				const lastSummary = await paymentService.getMonthlySummaryWithDetails(
-					userId,
-					lastMonthDate,
-				);
-				await lineService.replyText(event.replyToken, formatSummaryMessage('先月', lastSummary));
+				const lastSummary = await paymentService.getMonthlySummary(userId, lastMonthDate);
+				await lineService.replyWithMonthlySummary(event.replyToken, lastSummary);
 				break;
 			}
 
@@ -229,7 +219,7 @@ const postbackEventHandler = async (
 				await lineService.showLoading(userId);
 
 				// 使い方を表示
-				await lineService.replyText(event.replyToken, HOW_TO_USE_MESSAGE);
+				await lineService.replyWithHowToUse(event.replyToken);
 				break;
 			}
 

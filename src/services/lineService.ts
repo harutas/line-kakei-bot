@@ -1,14 +1,15 @@
 import { type ClientConfig, messagingApi } from '@line/bot-sdk';
+import type { MonthlySummaryEntity } from '../databases/entities/MonthlySummaryEntity';
 import type { PaymentEntity } from '../databases/entities/PaymentEntity';
-import { createPaymentBubble } from '../templates/flexMessages';
+import { createPaymentBubble, formatDeleteConfirmation } from '../templates/flexMessages';
 import {
-	formatCategorySelectionMessage,
+	formatHowToUse,
+	formatMonthlySummaryMessage,
 	formatRecordCompletionMessage,
+	formatTextMessage,
 } from '../templates/messages';
 import { PaymentCategory, toPaymentCategoryLabel } from '../types/payment';
 import {
-	ACTION_CANCEL_DELETE,
-	ACTION_CONFIRM_DELETE,
 	ACTION_RECORD_TODAY,
 	ACTION_SELECT_CATEGORY,
 	ACTION_SELECT_DATE,
@@ -42,14 +43,9 @@ class LineService {
 	 */
 	async replyText(replyToken: string, text: string): Promise<void> {
 		try {
-			const message: messagingApi.TextMessage = {
-				type: 'text',
-				text,
-			};
-
 			await this.client.replyMessage({
 				replyToken,
-				messages: [message],
+				messages: [formatTextMessage(text)],
 			});
 		} catch (error) {
 			log.error({ err: error, replyToken }, 'Failed to send text message');
@@ -93,15 +89,14 @@ class LineService {
 				items: quickReplyItems,
 			};
 
-			const message: messagingApi.TextMessage = {
-				type: 'text',
-				text: formatCategorySelectionMessage(content, amount),
-				quickReply,
-			};
-
 			await this.client.replyMessage({
 				replyToken,
-				messages: [message],
+				messages: [
+					formatTextMessage(
+						`「${content}」で${amount.toLocaleString()}円だね。\nカテゴリを選んでね！`,
+						quickReply,
+					),
+				],
 			});
 		} catch (error) {
 			log.error({ err: error, replyToken }, 'Failed to send category selection');
@@ -178,39 +173,39 @@ class LineService {
 
 	/**
 	 * 記録完了メッセージを送信
-	 * @param replyToken - 返信トークン
-	 * @param content - 支払い内容
-	 * @param category - カテゴリ
-	 * @param amount - 金額
 	 */
 	async replyWithCompletionAndSummary(
 		replyToken: string,
-		data: {
-			category: PaymentCategory;
-			content: string;
-			amount: number;
-			monthlyTotal: number;
-			paymentDate: Date;
+		params: {
+			payment: PaymentEntity;
+			monthlySummary: MonthlySummaryEntity;
 		},
 	): Promise<void> {
 		try {
-			const message: messagingApi.TextMessage = {
-				type: 'text',
-				text: formatRecordCompletionMessage(
-					data.category,
-					data.content,
-					data.amount,
-					data.monthlyTotal,
-					data.paymentDate,
-				),
-			};
-
 			await this.client.replyMessage({
 				replyToken,
-				messages: [message],
+				messages: [formatRecordCompletionMessage(params)],
 			});
 		} catch (error) {
 			log.error({ err: error, replyToken }, 'Failed to send completion message');
+			throw error;
+		}
+	}
+
+	/**
+	 * 月間の集計メッセージを送信
+	 */
+	async replyWithMonthlySummary(
+		replyToken: string,
+		monthlySummary: MonthlySummaryEntity,
+	): Promise<void> {
+		try {
+			await this.client.replyMessage({
+				replyToken,
+				messages: [formatMonthlySummaryMessage(monthlySummary)],
+			});
+		} catch (error) {
+			log.error({ err: error, replyToken }, 'Failed to send summary message');
 			throw error;
 		}
 	}
@@ -292,46 +287,24 @@ class LineService {
 	 */
 	async replyWithDeleteConfirmation(replyToken: string, payment: PaymentEntity): Promise<void> {
 		try {
-			const confirmData: PostbackData = {
-				action: ACTION_CONFIRM_DELETE,
-				paymentId: payment.id,
-			};
-
-			const cancelData: PostbackData = {
-				action: ACTION_CANCEL_DELETE,
-			};
-
-			const message: messagingApi.TemplateMessage = {
-				type: 'template',
-				altText: '削除確認',
-				template: {
-					type: 'confirm',
-					text: [
-						`${payment.content}`,
-						`¥${payment.amount.toLocaleString()}`,
-						``,
-						`この支出を削除しても大丈夫？`,
-					].join('\n'),
-					actions: [
-						{
-							type: 'postback',
-							label: 'はい',
-							data: JSON.stringify(confirmData),
-							displayText: '削除する',
-						},
-						{
-							type: 'postback',
-							label: 'いいえ',
-							data: JSON.stringify(cancelData),
-							displayText: 'キャンセル',
-						},
-					],
-				},
-			};
-
 			await this.client.replyMessage({
 				replyToken,
-				messages: [message],
+				messages: [formatDeleteConfirmation(payment)],
+			});
+		} catch (error) {
+			log.error({ err: error, replyToken }, 'Failed to send delete confirmation');
+			throw error;
+		}
+	}
+
+	/**
+	 * 使い方メッセージを送信
+	 */
+	async replyWithHowToUse(replyToken: string): Promise<void> {
+		try {
+			await this.client.replyMessage({
+				replyToken,
+				messages: [formatHowToUse()],
 			});
 		} catch (error) {
 			log.error({ err: error, replyToken }, 'Failed to send delete confirmation');
