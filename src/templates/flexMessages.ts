@@ -116,6 +116,28 @@ export function createPaymentBubble(
 							contents: [
 								{
 									type: 'text',
+									text: '金額',
+									color: '#aaaaaa',
+									size: 'md',
+									flex: 2,
+								},
+								{
+									type: 'text',
+									text: `¥${payment.amount.toLocaleString()}`,
+									wrap: true,
+									color: '#666666',
+									size: 'md',
+									flex: 5,
+								},
+							],
+						},
+						{
+							type: 'box',
+							layout: 'baseline',
+							spacing: 'sm',
+							contents: [
+								{
+									type: 'text',
 									text: 'カテゴリ',
 									color: '#aaaaaa',
 									size: 'md',
