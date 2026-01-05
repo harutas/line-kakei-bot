@@ -1,5 +1,6 @@
 import { HTTPFetchError, type MessageAPIResponseBase, type webhook } from '@line/bot-sdk';
 import type { Request, Response } from 'express';
+import { createAuthorizeUrl } from '../auth/zaim';
 import paymentRepository from '../databases/repositories/PaymentRepository';
 import lineService from '../services/lineService';
 import paymentService from '../services/paymentService';
@@ -38,7 +39,22 @@ const textEventHandler = async (
 		return;
 	}
 
+	const userId = event.source?.userId;
+	if (!userId) {
+		return;
+	}
+
 	const messageText = event.message.text.trim();
+
+	if (messageText === 'Zaim連携') {
+		const url = await createAuthorizeUrl(userId);
+
+		await lineService.replyText(
+			event.replyToken,
+			`Zaimとの連携を開始します。\n以下のURLから認証を完了させてください。\n\n${url}`,
+		);
+		return;
+	}
 
 	// 支払い内容と金額をパース
 	const parsed = parseExpenseInput(messageText);

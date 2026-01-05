@@ -2,12 +2,15 @@ import express, { type Application, type NextFunction, type Request, type Respon
 import { handleWebhook } from './handlers/webhook';
 import { httpLogger } from './middlewares/httpLogger';
 import { lineSignature } from './middlewares/lineSignature';
+import zaimCallback from './routes/zaimCallback';
 import logger from './utils/logger';
 
 const app: Application = express();
 const port = process.env.PORT || 8080;
 
 app.use(httpLogger);
+
+app.use('/zaim/callback', zaimCallback);
 
 // ヘルスチェック
 app.get('/', (_req: Request, res: Response) => {

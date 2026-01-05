@@ -13,7 +13,8 @@
     "setup:richmenu:dev": "dotenvx run -f .env.development -- ts-node scripts/setup-rich-menu.ts",
     "delete:richmenu:dev": "dotenvx run -f .env.development -- ts-node scripts/delete-rich-menu.ts",
     "setup:richmenu:prod": "dotenvx run -f .env.production -- ts-node scripts/setup-rich-menu.ts",
-    "delete:richmenu:prod": "dotenvx run -f .env.production -- ts-node scripts/delete-rich-menu.ts"
+    "delete:richmenu:prod": "dotenvx run -f .env.production -- ts-node scripts/delete-rich-menu.ts",
+    "test:zaim": "dotenvx run -f .env.development -- ts-node scripts/zaim.ts"
   },
   "keywords": [],
   "author": "",
@@ -24,6 +25,7 @@
     "dayjs": "^1.11.19",
     "express": "^5.2.1",
     "firebase-admin": "^13.6.0",
+    "oauth-1.0a": "^2.2.6",
     "pino": "^10.1.0",
     "pino-http": "^11.0.0"
   },
